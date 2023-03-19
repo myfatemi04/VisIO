@@ -293,39 +293,6 @@ class PatchDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.slide.spot_locations.image_x.shape[0]
 
-class PatchDataset2Level(torch.utils.data.Dataset):
-    def __init__(self, patchdataset1: PatchDataset, patchdataset2: PatchDataset):
-        super().__init__()
-
-        self.patchdataset1 = patchdataset1
-        self.patchdataset2 = patchdataset2
-
-        assert len(patchdataset1) == len(patchdataset2), f"Found two PatchDatasets of differing lengths: {len(patchdataset1)} and {len(patchdataset2)}"
-
-    def __len__(self):
-        return len(self.patchdataset1)
-
-    def __getitem__(self, index: int):
-        patch1, label1 = self.patchdataset1[index]
-        patch2, label2 = self.patchdataset2[index]
-
-        assert (label1 == label2).all(), f"Found two PatchDatasets with differing labels at index {index}: {label1} and {label2}"
-
-        return (patch1, patch2), label1
-
-    @staticmethod
-    def collate_fn(datapoints):
-        patch1 = []
-        patch2 = []
-        label = []
-
-        for ((patch1_, patch2_), label_) in datapoints:
-            patch1.append(patch1_)
-            patch2.append(patch2_)
-            label.append(label_)
-
-        return (torch.stack(patch1), torch.stack(patch2)), torch.stack(label)
-
 def load_spot_locations_json(src: str):
     import json
 
@@ -437,5 +404,5 @@ def load_old_visium_from_folder(main_folder: str, image_path: str, spot_image_sc
         spot_counts=spot_counts,
         genes=genes,
     )
-    
+
     return slide

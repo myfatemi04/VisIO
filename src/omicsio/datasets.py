@@ -380,3 +380,59 @@ def load_counts(matrix_path):
     dense = np.array(matrix.sparse.to_dense())
 
     return torch.tensor(dense).T
+
+def load_slide_from_folder(main_folder: str, image_path: str, spot_image_scaling: float = 1.0) -> Slide:
+    matrix_dir = main_folder + '/outs/filtered_feature_bc_matrix'
+
+    assert os.path.exists(main_folder + '/outs'), f"Folder '{main_folder}' may be invalid. It does not contain a subdirectory called 'outs'."
+
+    spot_locations, barcode_order = load_spot_locations_csv(main_folder + '/outs/spatial/tissue_positions.csv')
+
+    spot_counts = load_counts(matrix_dir + '/matrix.mtx.gz')
+    barcodes = [barcode for barcode, in load_compressed_tsv(matrix_dir + '/barcodes.tsv.gz')]
+    spot_counts_by_barcode = {barcode: counts for barcode, counts in zip(barcodes, spot_counts)}
+    spot_counts = torch.stack([spot_counts_by_barcode[barcode] for barcode in barcode_order], dim=0)
+
+    genes = [gene for feature_id, gene, feature_type in load_compressed_tsv(matrix_dir + '/features.tsv.gz')]
+
+    slide = Slide(
+        image_path=image_path,
+        spot_locations=spot_locations * spot_image_scaling,
+        spot_counts=spot_counts,
+        genes=genes,
+    )
+
+    return slide
+
+def load_old_visium_from_folder(main_folder: str, image_path: str, spot_image_scaling: float = 1.0) -> Slide:
+    import pandas as pd
+
+    matrix_dir = f'{main_folder}/outs/filtered_feature_bc_matrix'
+    barcodes = [barcode for barcode, in load_compressed_tsv(matrix_dir + '/barcodes.tsv.gz')]
+    spot_counts = load_counts(matrix_dir + '/matrix.mtx.gz')
+    spot_counts_by_barcode = {barcode: counts for barcode, counts in zip(barcodes, spot_counts)}
+
+    tissue_positions = pd.read_csv(
+        f'{main_folder}/outs/spatial/tissue_positions_list.csv',
+        names=['barcode', 'in_tissue', 'row', 'col', 'image_y', 'image_x'],
+        header=None,
+    )
+    tissue_positions = tissue_positions[tissue_positions['in_tissue'] == 1]
+    # Ensure that they are parallel
+    barcode_order = list(tissue_positions['barcode'])
+    tissue_positions_obj = SpotLocations(
+        image_x=torch.tensor(tissue_positions['image_x'].to_numpy()),
+        image_y=torch.tensor(tissue_positions['image_y'].to_numpy()),
+        row=torch.tensor(tissue_positions['row'].to_numpy()),
+        col=torch.tensor(tissue_positions['col'].to_numpy()),
+        dia=None,
+    )
+    spot_counts = torch.stack([spot_counts_by_barcode[barcode] for barcode in barcode_order], dim=0)
+
+    genes = [gene for feature_id, gene, feature_type in load_compressed_tsv(matrix_dir + '/features.tsv.gz')]
+    slide = Slide(
+        image_path=image_path,
+        spot_locations=tissue_positions_obj * spot_image_scaling,
+        spot_counts=spot_counts,
+        genes=genes,
+    )

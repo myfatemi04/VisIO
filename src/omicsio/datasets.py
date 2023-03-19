@@ -430,9 +430,12 @@ def load_old_visium_from_folder(main_folder: str, image_path: str, spot_image_sc
     spot_counts = torch.stack([spot_counts_by_barcode[barcode] for barcode in barcode_order], dim=0)
 
     genes = [gene for feature_id, gene, feature_type in load_compressed_tsv(matrix_dir + '/features.tsv.gz')]
+
     slide = Slide(
         image_path=image_path,
         spot_locations=tissue_positions_obj * spot_image_scaling,
         spot_counts=spot_counts,
         genes=genes,
     )
+    
+    return slide

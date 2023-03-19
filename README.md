@@ -1,6 +1,6 @@
-# Slide and Spot Locations
+# OmicsIO - Spatial Omics Data Processing
 
-This module provides classes and functions to handle Visium spatial transcriptomics data. The main classes are `SpotLocations`, `Slide`, `PatchDataset`, and `PatchDataset2Level`. The module also includes utility functions to load data from a folder and preprocess it.
+This module provides classes and functions to handle Visium spatial transcriptomics data. The main classes are `SpotLocations`, `Slide`, `PatchDataset`. The module also includes utility functions to load raw data from a folder and preprocess it.
 
 ## SpotLocations
 

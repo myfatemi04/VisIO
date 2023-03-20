@@ -315,10 +315,14 @@ def load_spot_locations_json(src: str):
         dia=torch.tensor(dia),
     )
 
-def load_spot_locations_csv(src: str):
+def load_spot_locations_csv(src: str, has_headers=True):
     import pandas as pd
 
-    locations = pd.read_csv(src, index_col='barcode')
+    if has_headers:
+        locations = pd.read_csv(src, index_col='barcode')
+    else:
+        # Fill in column names manually
+        locations = pd.read_csv(src, index_col='barcode', names=['barcode', 'in_tissue', 'array_row', 'array_col', 'pxl_row_in_fullres', 'pxl_col_in_fullres'])
     locations = locations.loc[locations['in_tissue'] == 1]
     barcode_order = list(locations.index)
     
@@ -353,7 +357,13 @@ def load_slide_from_folder(main_folder: str, image_path: str, spot_image_scaling
 
     assert os.path.exists(main_folder + '/outs'), f"Folder '{main_folder}' may be invalid. It does not contain a subdirectory called 'outs'."
 
-    spot_locations, barcode_order = load_spot_locations_csv(main_folder + '/outs/spatial/tissue_positions.csv')
+    if os.path.exists(main_folder + "/outs/spatial/tissue_positions.csv"):
+        spot_locations, barcode_order = load_spot_locations_csv(main_folder + '/outs/spatial/tissue_positions.csv')
+    elif os.path.exists(main_folder + "/outs/spatial/tissue_positions_list.csv"):
+        # Use old format
+        spot_locations, barcode_order = load_spot_locations_csv(main_folder + '/outs/spatial/tissue_positions_list.csv', has_headers=False)
+    else:
+        raise ValueError("Could not find tissue_positions.csv or tissue_positions_list.csv (should be in outs/spatial/tissue_positions_X.csv)")
 
     spot_counts = load_counts(matrix_dir + '/matrix.mtx.gz')
     barcodes = [barcode for barcode, in load_compressed_tsv(matrix_dir + '/barcodes.tsv.gz')]

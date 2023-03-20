@@ -161,7 +161,7 @@ class Slide:
             return image_region
 
     @staticmethod
-    def load(path: str, custom_image_path: Optional[str]) -> 'Slide':
+    def load(path: str, custom_image_path: Optional[str] = None) -> 'Slide':
         import pickle
 
         with open(path, "rb") as f:
@@ -169,6 +169,8 @@ class Slide:
 
         if custom_image_path is not None:
             result.image_path = custom_image_path
+        
+        return result
 
     def save(self, path: str):
         import pickle

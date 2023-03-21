@@ -150,7 +150,7 @@ class Slide:
         """
 
         if isinstance(self.image, torch.Tensor):
-            return self.image[y:y + h, x:x + h]
+            return self.image[:, y:y + h, x:x + h]
         else:
             import openslide
             
@@ -224,10 +224,26 @@ class Slide:
         cmap: Maps intensity to RGB
         """
         spot_size_adjusted = torch.div(spot_size, downsample, rounding_mode="floor")
-        new_image = self.image[:, ::downsample, ::downsample].clone()
+
+        image_xs = self.spot_locations.image_x
+        image_ys = self.spot_locations.image_y
+
+        if isinstance(self.image, torch.Tensor):
+            new_image = self.image[:, ::downsample, ::downsample].clone()
+        else:
+            # Do some cropping to speed up rendering
+            min_x = int(image_xs.min() - 1024)
+            min_y = int(image_ys.min() - 1024)
+            max_x = int(image_xs.max() + 1024)
+            max_y = int(image_ys.max() + 1024)
+            pil_image = self.image.read_region((min_x, min_y), 0, (max_x - min_x, max_y - min_y))
+            new_image = TF.to_tensor(pil_image)[:3, ::downsample, ::downsample]
+            image_xs = image_xs - min_x
+            image_ys = image_ys - min_y
+            
         for spot in range(self.spot_locations.image_x.shape[0]):
-            image_x = int((self.spot_locations.image_x[spot] - spot_size / 2) / downsample)
-            image_y = int((self.spot_locations.image_y[spot] - spot_size / 2) / downsample)
+            image_x = int((image_xs[spot] - spot_size / 2) / downsample)
+            image_y = int((image_ys[spot] - spot_size / 2) / downsample)
             intensity = spot_counts[spot].item()
             r, g, b, a = cmap(intensity)
 
@@ -277,11 +293,7 @@ class PatchDataset(torch.utils.data.Dataset):
         image_x, image_y = self.slide.spot_locations.image_x[index], self.slide.spot_locations.image_y[index]
         image_x = int(image_x) - self.patch_size // 2
         image_y = int(image_y) - self.patch_size // 2
-        patch = self.slide.image[
-            :,
-            image_y:image_y + self.patch_size,
-            image_x:image_x + self.patch_size,
-        ]
+        patch = self.slide.image_region(image_x, image_y, self.patch_size, self.patch_size)
         spot_count = self.slide.spot_counts[index]
 
         if self.patch_transform is not None:

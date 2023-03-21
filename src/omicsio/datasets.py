@@ -217,9 +217,8 @@ class Slide:
     
     def render(self, downsample, spot_counts, spot_size, cmap=matplotlib.colormaps['inferno']) -> PIL.Image.Image:
         """
-        image: (3, height, width)
-        spot_locations: SpotLocations
-        spot_intensities: (num_spots,) -- intensities for *one* gene
+        downsample: int -- how much to decrease image size by
+        spot_counts: (num_spots,) -- intensities for *one* gene
         spot_size: int -- size of square to draw around each spot
         cmap: Maps intensity to RGB
         """
@@ -256,26 +255,6 @@ class Slide:
         numpy_array = np.array(new_image.cpu().permute(1, 2, 0) * 255, dtype=np.uint8)
         pil_image = PIL.Image.fromarray(numpy_array)
         return pil_image
-
-    # Utility methods that might add too many dependencies
-    # @overload
-    # def spatialde(self) -> pd.DataFrame: ...
-    # @overload
-    # def spatialde(self, spot_counts: torch.Tensor) -> pd.DataFrame: ...
-    # def spatialde(self, spot_counts=None):
-    #     import spatialde
-
-    #     if spot_counts is None:
-    #         spot_counts = self.spot_counts
-
-    #     result = spatialde.run_spatialde(
-    #         spot_counts.cpu().numpy(),
-    #         self.genes,
-    #         self.spot_locations.image_x.numpy(),
-    #         self.spot_locations.image_y.numpy(),
-    #     )
-
-    #     return result
 
 class PatchDataset(torch.utils.data.Dataset):
     def __init__(self, slide: Slide, patch_size: int, magnify: int, patch_transform, device):

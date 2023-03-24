@@ -66,4 +66,4 @@ The `PatchDataset` class is a PyTorch Dataset that provides patches from a slide
 - `load_compressed_tsv(path)`: Load data from a compressed TSV file.
 - `load_counts(matrix_path)`: Load spot counts from a matrix file.
 - `load_slide_from_folder(main_folder: str, image_path: str, spot_image_scaling: float = 1.0)`: Load a slide from a folder containing Visium data.
-- `load_old_visium_from_folder(main_folder: str, image_path: str, spot_image_scaling: float = 1.0)`: Load a slide from a folder containing old Visium data.
+- `load_single_cell_from_folder(main_folder: str)`: Loads single-cell data. This is stored as a `Slide`, without the corresponding `spot_locations` or `image` attributes.

@@ -286,6 +286,30 @@ class PatchDataset(torch.utils.data.Dataset):
     def __len__(self):
         return self.slide.spot_locations.image_x.shape[0]
 
+class PatchDatasetWithCellAnnotations(PatchDataset):
+    def __init__(self, slide: Slide, detections: list, patch_size: int, magnify: int, patch_transform, device):
+        """
+        `detections` should be a list of dictionaries with the keys `boxes`, `labels`, and `scores`.
+        """
+        super().__init__(slide, patch_size, magnify, patch_transform, device)
+        self.detections = detections
+
+    def __getitem__(self, idx: int):
+        image, label = super().__getitem__(idx)
+        detections = self.detections[idx]
+        return image, label, detections
+
+    @staticmethod
+    def collate_fn(batch):
+        # returns images, labels, detections
+        images = torch.stack([image for image, _, _ in batch])
+        labels = torch.stack([label for _, label, _ in batch])
+        detections = [detection for _, _, detection in batch]
+        return images, labels, detections
+
+    def __len__(self):
+        return super().__len__()
+
 def load_spot_locations_json(src: str):
     import json
 

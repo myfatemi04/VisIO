@@ -144,20 +144,33 @@ class Slide:
 
         return image
     
-    def image_region(self, x, y, w, h):
+    def image_region(self, x, y, w, h, downsample=1):
         """
         Loads only one section of the image; useful for large files (like .svs)
         """
 
         if isinstance(self.image, torch.Tensor):
-            return self.image[:, y:y + h, x:x + h]
+            im = self.image[:, y:y + h, x:x + w]
+            if downsample != 1:
+                return im[:, ::downsample, ::downsample]
+            return im
         else:
             import openslide
             
             assert isinstance(self.image, openslide.OpenSlide), "Image must be either a Torch tensor or an openslide.OpenSlide object."
 
-            pil_image_region = self.image.read_region((x, y), 0, (w, h))
+            best_level_for_downsample = self.image.get_best_level_for_downsample(downsample)
+            available_downsample = self.image.level_downsamples[best_level_for_downsample]
+            further_downsample = downsample // available_downsample
+
+            if int(further_downsample) != downsample / available_downsample:
+                raise ValueError(f"Downsample factor {downsample} is not compatible with image {self.image_path=}.")
+
+            pil_image_region = self.image.read_region((x, y), best_level_for_downsample, (w, h))
             image_region = TF.to_tensor(pil_image_region)
+            if further_downsample != 1:
+                return image_region[:, ::further_downsample, ::further_downsample]
+
             return image_region
 
     @staticmethod

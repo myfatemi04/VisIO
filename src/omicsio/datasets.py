@@ -103,16 +103,19 @@ class Slide:
 
         return top_left, top_right, bottom_left, bottom_right
 
-    # split into quadrants (and their complements)
-    def create_quadrants(self):
-        top_left, top_right, bottom_left, bottom_right = self.get_quadrant_masks()
-
-        select_subset = lambda mask: Slide(
+    def select_subset(self, mask)
+        return Slide(
             image_path=self.image_path,
             spot_locations=self.spot_locations.select_subset(mask),
             spot_counts=self.spot_counts[mask],
             genes=self.genes
         )
+
+    # split into quadrants (and their complements)
+    def create_quadrants(self):
+        top_left, top_right, bottom_left, bottom_right = self.get_quadrant_masks()
+
+        select_subset = self.select_subset
 
         return (
             (select_subset(top_left), select_subset(~top_left)),
@@ -152,26 +155,34 @@ class Slide:
         if isinstance(self.image, torch.Tensor):
             im = self.image[:, y:y + h, x:x + w]
             if downsample != 1:
-                return im[:, ::downsample, ::downsample]
+                return im[:, ::downsample, ::downsample].contiguous()
             return im
         else:
             import openslide
             
             assert isinstance(self.image, openslide.OpenSlide), "Image must be either a Torch tensor or an openslide.OpenSlide object."
 
-            best_level_for_downsample = self.image.get_best_level_for_downsample(downsample)
-            available_downsample = self.image.level_downsamples[best_level_for_downsample]
-            further_downsample = downsample // available_downsample
+            if downsample != 1:
+                best_level_for_downsample = 0
+                available_downsample = 1
+                further_downsample = int(downsample // available_downsample)
 
-            if int(further_downsample) != downsample / available_downsample:
-                raise ValueError(f"Downsample factor {downsample} is not compatible with image {self.image_path=}.")
+                if further_downsample != downsample / available_downsample:
+                    print(self.image.level_downsamples, best_level_for_downsample)
+                    raise ValueError(f"Downsample factor {downsample} is not compatible with image {self.image_path=}.")
 
-            pil_image_region = self.image.read_region((x, y), best_level_for_downsample, (w, h))
-            image_region = TF.to_tensor(pil_image_region)
-            if further_downsample != 1:
-                return image_region[:, ::further_downsample, ::further_downsample]
+                pil_image_region = self.image.read_region((x, y), best_level_for_downsample, (int(w // available_downsample), int(h // available_downsample)))
+                image_region = TF.to_tensor(pil_image_region)
 
-            return image_region
+                if further_downsample != 1:
+                    return image_region[:, ::further_downsample, ::further_downsample].contiguous()
+
+                return image_region
+            else:
+                pil_image_region = self.image.read_region((x, y), 0, (w, h))
+                image_region = TF.to_tensor(pil_image_region)
+
+                return image_region
 
     @staticmethod
     def load(path: str, custom_image_path: Optional[str] = None) -> 'Slide':
@@ -286,11 +297,12 @@ class PatchDataset(torch.utils.data.Dataset):
         image_x = int(image_x) - self.patch_size // 2
         image_y = int(image_y) - self.patch_size // 2
         patch = self.slide.image_region(image_x, image_y, self.patch_size, self.patch_size)
-        spot_count = self.slide.spot_counts[index]
 
         if self.patch_transform is not None:
             patch = self.patch_transform(patch)
 
+        spot_count = self.slide.spot_counts[index]
+        
         if self.magnify != 1:
             patch = TF.resize(patch, (int(self.patch_size * self.magnify), int(self.patch_size * self.magnify)))
 

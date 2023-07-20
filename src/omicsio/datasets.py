@@ -103,7 +103,7 @@ class Slide:
 
         return top_left, top_right, bottom_left, bottom_right
 
-    def select_subset(self, mask)
+    def select_subset(self, mask):
         return Slide(
             image_path=self.image_path,
             spot_locations=self.spot_locations.select_subset(mask),

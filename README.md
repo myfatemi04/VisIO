@@ -2,6 +2,8 @@
 
 This module provides classes and functions to handle Visium spatial transcriptomics data. The main classes are `SpotLocations`, `Slide`, `PatchDataset`. The module also includes utility functions to load raw data from a folder and preprocess it.
 
+If you have any questions, feel free to reach out to me on the EDIT Slack!
+
 ## Quickstart
 
 Installation:

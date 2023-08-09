@@ -169,7 +169,7 @@ class Slide:
 
                 if further_downsample != downsample / available_downsample:
                     print(self.image.level_downsamples, best_level_for_downsample)
-                    raise ValueError(f"Downsample factor {downsample} is not compatible with image {self.image_path=}.")
+                    raise ValueError(f"Downsample factor {downsample} is not compatible with image {self.image_path}.")
 
                 pil_image_region = self.image.read_region((x, y), best_level_for_downsample, (int(w // available_downsample), int(h // available_downsample)))
                 image_region = TF.to_tensor(pil_image_region)
@@ -224,10 +224,10 @@ class Slide:
         for gene in genes:
             if gene not in self.genes:
                 if suppress_errors:
-                    print(f"WARNING: Gene {gene} not found in slide {self.image_path=}.")
+                    print(f"WARNING: Gene {gene} not found in slide {self.image_path}.")
                     continue
                 
-                raise ValueError(f"Gene {gene} not found in slide {self.image_path=}.")
+                raise ValueError(f"Gene {gene} not found in slide {self.image_path}.")
             else:
                 indexes.append(self.genes.index(gene))
                 valid_genes.append(gene)

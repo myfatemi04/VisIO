@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from functools import cached_property
 from typing import Optional
 
 import matplotlib
@@ -124,7 +123,7 @@ class Slide:
             (select_subset(bottom_right), select_subset(~bottom_right)),
         )
 
-    @cached_property
+    @property
     def image(self):
         import PIL.Image
         import torchvision.transforms.functional as TF
